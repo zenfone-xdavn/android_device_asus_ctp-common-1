@@ -23,7 +23,7 @@ on init
     chmod 0770 /dev/ug31xx
     chown system system /dev/ug31xx
 
-    export LD_SHIM_LIBS /system/bin/mmgr|libshim_mmgr.so:/system/bin/gpsd|libshim_gps.so:/system/lib/hw/gps.redhookbay.so|libshim_gps.so:/system/lib/hw/sensors.redhookbay.so|libshim_sensors.so:/system/lib/libtcs.so|libshim_tcs.so:/system/lib/libparameter.so|libshim_audio.so:/system/lib/parameter-framework-plugins/Audio/libroute-subsystem.so|libshim_audio.so:/system/lib/parameter-framework-plugins/Audio/libtinyalsa-subsystem.so|libshim_audio.so:/system/lib/libaudience-manager.so|libshim_audio.so:/system/lib/hw/camera.vendor.redhookbay.so|libshim_camera.so
+    export LD_SHIM_LIBS "/system/bin/mmgr|libshim_mmgr.so:/system/bin/gpsd|libshim_gps.so:/system/lib/hw/gps.redhookbay.so|libshim_gps.so:/system/lib/hw/sensors.redhookbay.so|libshim_sensors.so:/system/lib/libtcs.so|libshim_tcs.so:/system/lib/libparameter.so|libshim_audio.so:/system/lib/parameter-framework-plugins/Audio/libroute-subsystem.so|libshim_audio.so:/system/lib/parameter-framework-plugins/Audio/libtinyalsa-subsystem.so|libshim_audio.so:/system/lib/libaudience-manager.so|libshim_audio.so:/system/lib/hw/camera.vendor.redhookbay.so|libshim_camera.so:/system/lib/hw/hwcomposer.clovertrail.so|libshim_hwc.so:/system/bin/bd_prov|libstock_crypto.so:/system/bin/customize_service|libstock_crypto.so"
 
     write /sys/class/graphics/fbcon/cursor_blink 0
     mkdir /data/system/ 0770 system system
@@ -342,10 +342,19 @@ on property:service.mmgr.smp=1
 on property:service.mmgr.smp=0
     write /proc/irq/36/smp_affinity 1
 
-service_redefine drm /system/bin/drmserver
+service audioserver /system/bin/audioserver
+    class main
+    user audioserver
+    # media gid needed for /dev/fm (radio) and for /data/misc/media (tee)
+    group audio camera drmrpc inet media mediadrm net_bt net_bt_admin net_bw_acct qcom_diag radio system wakelock
+    ioprio rt 4
+    writepid /dev/cpuset/foreground/tasks /dev/stune/foreground/tasks
+
+service drm /system/bin/drmserver
     class main
     user drm
-    group drm system inet drmrpc sdcard_r
+    group drm system inet drmrpc sdcard_r readproc
+    writepid /dev/cpuset/foreground/tasks
 
 service sensorhubd /system/bin/sensorhubd
     class main
@@ -379,7 +388,7 @@ service upi_ug31xx /system/bin/upi_ug31xx
     class core
     user system
     group system
-    seclabel u:r:asus_config:s0
+#    seclabel u:r:asus_config:s0
 
 #Turn on VPROG2 Power rail to avoid power leakage in Sensor
 
@@ -405,19 +414,21 @@ service iprenew_eth0 /system/bin/dhcpcd -n
     disabled
     oneshot
 
+service surfaceflinger /system/bin/surfaceflinger
+    class core
+    user root
+    group system graphics drmrpc readproc
+    onrestart restart zygote
+    writepid /dev/stune/foreground/tasks
+
 # From init.rc in stock, these redefine service definitions
 
-service_redefine media /system/bin/mediaserver
-    class main
-    user media
-    group audio camera inet net_bt net_bt_admin net_bw_acct drmrpc mediadrm radio system
-    ioprio rt 4
-
-service_redefine keystore /system/bin/keystore /data/misc/keystore
+service keystore /system/bin/keystore /data/misc/keystore
     class main
     user keystore
-    group keystore drmrpc system
-    setenv LD_SHIM_LIBS /system/libbinder.so|libstock_crypto.so:/system/lib/hw/keystore.vendor.clovertrail.so|libstock_crypto.so
+    group keystore drmrpc readproc
+    writepid /dev/cpuset/foreground/tasks
+    setenv LD_SHIM_LIBS "/system/lib/libbinder.so|libstock_crypto.so:/system/lib/hw/keystore.vendor.clovertrail.so|libstock_crypto.so"
 
 # Workaround for broken incall audio
 service bootsnd /system/bin/tinyplay /system/etc/silence.wav -D 0 -d 0 -p 880
