@@ -53,8 +53,8 @@ BOARD_KERNEL_CMDLINE += snd_pcm.maximum_substreams=8 ip=50.0.0.2:50.0.0.1::255.2
 BOARD_KERNEL_CMDLINE += debug_locks=0
 #BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
 
-TARGET_RECOVERY_UPDATER_LIBS += libintel_updater
-TARGET_RECOVERY_UPDATER_EXTRA_LIBS += liboempartitioning_static
+TARGET_RECOVERY_UPDATER_LIBS += libosip_updater
+TARGET_RECOVERY_UPDATER_EXTRA_LIBS += libintel_updater liboempartitioning_static
 
 # Adb
 BOARD_FUNCTIONFS_HAS_SS_COUNT := true
